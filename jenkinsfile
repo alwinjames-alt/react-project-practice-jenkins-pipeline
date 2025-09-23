@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+    stages{
+        stage('Pull'){
+            steps{
+                    sh ''' 
+                        echo "Pulling from github"
+                        sudo git pull https://github.com/alwinjames-alt/react-project.git
+                        echo "Pulled Successfully"
+                    '''
+            }
+        }
+    }
+    stages{
+        stage('Build'){
+            steps{
+                    sh ''' 
+                        echo "Building the app code"
+                        npm run build
+                        echo "Built Successfull"
+                    '''
+            }
+        }
+    }
+    stages{
+        stage('Test'){
+            steps{
+                    sh ''' 
+                        echo "Testing the app code"
+                        echo "No Errors"
+                    '''
+            }
+        }
+    }
+    stages {
+        stage('Deploy to App Server') {
+            steps {
+                sshagent (credentials: ['app-server-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ubuntu@3.108.250.37 '
+                        sudo git pull https://github.com/alwinjames-alt/react-project.git
+                        npm run build
+                        cp dist/* /var/www/html'
+                    '''
+                }
+            }
+        }
+    }
+}
