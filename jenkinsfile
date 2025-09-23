@@ -10,8 +10,7 @@ pipeline {
                     '''
             }
         }
-    }
-    stages{
+    
         stage('Build'){
             steps{
                     sh ''' 
@@ -21,8 +20,7 @@ pipeline {
                     '''
             }
         }
-    }
-    stages{
+    
         stage('Test'){
             steps{
                     sh ''' 
@@ -31,8 +29,7 @@ pipeline {
                     '''
             }
         }
-    }
-    stages {
+
         stage('Deploy to App Server') {
             steps {
                 sshagent (credentials: ['app-server-key']) {
