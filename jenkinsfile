@@ -1,32 +1,47 @@
 pipeline {
     agent any
-    stages{
-        stage('Pull'){
-            steps{
-                    sh ''' 
-                        echo "Pulling from github"
-                        sudo git pull https://github.com/alwinjames-alt/react-project.git
-                        echo "Pulled Successfully"
-                    '''
+
+    stages {
+        stage('Pull') {
+            steps {
+                sh '''
+                    echo "Pulling from GitHub"
+
+                    if [ -d "react-project/.git" ]; then
+                        echo "Repo exists, resetting git"
+                        cd react-project
+                        git reset --hard
+                        git clean -fd
+                        git pull origin master
+                    else
+                        echo "Repo does not exist so cloning"
+                        git clone https://github.com/alwinjames-alt/react-project.git react-project
+                    fi
+
+                    echo "Pulled Successfully"
+                '''
             }
         }
-    
-        stage('Build'){
-            steps{
-                    sh ''' 
-                        echo "Building the app code"
-                        npm run build
-                        echo "Built Successfull"
-                    '''
+
+        stage('Build') {
+            steps {
+                sh '''
+                    echo "Building the app code"
+                    cd react-project
+                    npm install
+                    npm audit fix --force
+                    npm run build
+                    echo "Build Successful"
+                '''
             }
         }
-    
-        stage('Test'){
-            steps{
-                    sh ''' 
-                        echo "Testing the app code"
-                        echo "No Errors"
-                    '''
+
+        stage('Test') {
+            steps {
+                sh '''
+                    echo "Testing the app code"
+                    echo "No Errors"
+                '''
             }
         }
 
@@ -34,10 +49,23 @@ pipeline {
             steps {
                 sshagent (credentials: ['app-server-key']) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@3.108.250.37 '
-                        sudo git pull https://github.com/alwinjames-alt/react-project.git
-                        npm run build
-                        cp dist/* /var/www/html'
+                        ssh -o StrictHostKeyChecking=no ubuntu@65.0.178.101 "
+                            if [ -d 'react-project/.git' ]; then
+                                cd react-project
+                                git reset --hard
+                                git clean -fd
+                                git pull origin master
+                            else
+                                git clone https://github.com/alwinjames-alt/react-project.git react-project
+                            fi
+
+                            cd react-project
+                            npm install
+                            npm audit fix --force
+                            npm run build
+                            sudo cp -r dist/* /var/www/html
+                            pm2 start -f /home/ubuntu/react-project/dummy-backend/app.js --name dummy-backend
+                      "
                     '''
                 }
             }
