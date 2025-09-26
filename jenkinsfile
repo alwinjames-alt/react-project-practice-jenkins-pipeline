@@ -6,15 +6,15 @@ pipeline {
                 sh '''
                     echo "SCM checkout"
 
-                    if [ -d "react-project/.git" ]; then
+                    if [ -d "backend-test/.git" ]; then
                         echo "Repo exists, resetting git"
-                        cd react-project
+                        cd backend-test
                         git reset --hard
                         git clean -fd
-                        git pull origin master
+                        git pull origin main
                     else
                         echo "Repo does not exist so cloning"
-                        git clone https://github.com/alwinjames-alt/Backend-test.git backend-test
+                        git clone https://github.com/alwinjames-alt/posts_node.git backend-test
                     fi
                 '''
             }
@@ -27,25 +27,21 @@ pipeline {
                 '''
             }
         }
+
         stage('Docker Build') {
             steps {
                 script {
                     echo "Starting Docker build..."
 
-                    // Navigate to your app folder
                     sh 'cd backend-test'
 
-                    // Extract version from package.json
-                    def version = sh(script: "jq -r '.version' package.json", returnStdout: true).trim()
+                    def version = sh(script: "jq -r '.version' backend-test/package.json", returnStdout: true).trim()
                     echo "App version: ${version}"
 
-                    // Build Docker image with version tag
-                    sh "docker build -t backend-test:${version} ."
+                    sh "docker build -t alwinjames313/backend-test:${version} -f backend-test/dockerfile backend-test"
 
-                    // Tag also as latest
-                    sh "docker tag backend-test:${version} backend-test:latest"
+                    sh "docker tag alwinjames313/backend-test:${version} alwinjames313/backend-test:latest"
 
-                    // Save the version in an environment variable for next stage
                     env.IMAGE_VERSION = version
 
                     echo "Docker image built successfully!"
@@ -57,12 +53,10 @@ pipeline {
                 script {
                     echo "Starting Docker deploy..."
 
-                    // Login to Docker Hub (use credentials or token safely)
                     sh "docker login -u alwinjames313 -p Alwin@6282"
 
-                    // Push both versioned and latest images
-                    sh "docker push backend-test:${env.IMAGE_VERSION}"
-                    sh "docker push backend-test:latest"
+                    sh "docker push alwinjames313/backend-test:${env.IMAGE_VERSION}"
+                    sh "docker push alwinjames313/backend-test:latest"
 
                     echo "Docker images pushed successfully!"
                 }
@@ -75,8 +69,8 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ubuntu@13.126.127.121 "  
                         echo 'Deploying to EC2 instance'
                         docker login -u alwinjames313 -p Alwin@6282
-                        docker pull backend-test:latest
-                        docker run -d -p 8080:8080 backend-test:latest
+                        docker pull alwinjames313/backend-test:latest
+                        docker run -d -p 8080:8080 alwinjames313/backend-test:latest
                     '''
                 }
             }
@@ -86,7 +80,6 @@ pipeline {
                 script {
                     echo "Post deployment testing on /readiness..."
 
-                    // Make a curl request and get HTTP status code
                     def status = sh(
                         script: "curl -s -o /dev/null -w '%{http_code}' http://13.126.127.121:8080/readiness",
                         returnStdout: true
