@@ -64,13 +64,13 @@ pipeline {
         }
         stage('EC2 Deploy') {
             steps {
-                sshagent (credentials: ['app-server-key	']) {
+                sshagent (credentials: ['app-server-key']) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@13.126.127.121 "  
+                        ssh -o StrictHostKeyChecking=no ubuntu@13.126.127.121 '  
                         echo 'Deploying to EC2 instance'
                         docker login -u alwinjames313 -p Alwin@6282
                         docker pull alwinjames313/backend-test:latest
-                        docker run -d -p 8080:8080 alwinjames313/backend-test:latest
+                        docker run -d -p 8080:8080 alwinjames313/backend-test:latest '
                     '''
                 }
             }
@@ -81,7 +81,7 @@ pipeline {
                     echo "Post deployment testing on /readiness..."
 
                     def status = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' http://13.126.127.121:8080/readiness",
+                        script: "curl --max-time 10 -s -o /dev/null -w '%{http_code}' http://13.126.127.121:8080/readiness || echo 000",
                         returnStdout: true
                     ).trim()
 
