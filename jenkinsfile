@@ -69,29 +69,28 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ubuntu@13.126.127.121 '  
                         echo 'Deploying to EC2 instance'
                         docker login -u alwinjames313 -p Alwin@6282
+
+                        docker ps -q | xargs -r docker stop
+                        docker container prune -f
+
                         docker pull alwinjames313/backend-test:latest
                         docker run -d -p 8080:8080 alwinjames313/backend-test:latest '
                     '''
                 }
             }
         }
-        stage('Post deployment Test'){
+        stage('Post Deployment Cleanup') {
             steps {
                 script {
-                    echo "Post deployment testing on /readiness..."
+                    echo "Cleaning up Docker resources on Jenkins agent..."
 
-                    def status = sh(
-                        script: "curl --max-time 10 -s -o /dev/null -w '%{http_code}' http://13.126.127.121:8080/readiness || echo 000",
-                        returnStdout: true
-                    ).trim()
+                    sh 'docker ps -q | xargs -r docker stop'
 
-                    echo "HTTP Status Code: ${status}"
+                    sh 'docker container prune -f'
 
-                    if (status == '200') {
-                        echo "Deployment successful! /readiness returned 200."
-                    } else {
-                        error "Deployment failed! /readiness returned HTTP ${status}"
-                    }
+                    sh 'docker system prune -af'
+
+                    echo "Jenkins cleanup completed."
                 }
             }
         }
